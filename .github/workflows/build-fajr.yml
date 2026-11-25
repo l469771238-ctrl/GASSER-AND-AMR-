@@ -1,0 +1,41 @@
+name: Build Fajr alarm APK
+on:
+  push:
+    branches: ['arena/8bed749a-gasser-and-amr']
+    paths:
+      - 'FajrAlarm/**'
+      - '.github/workflows/build-fajr.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build debug APK
+        run: gradle -p FajrAlarm assembleDebug --no-daemon --stacktrace
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fajr-alarm-debug-apk
+          path: FajrAlarm/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish test APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "fajr-test-${GITHUB_RUN_ID}" \
+            --target "$GITHUB_SHA" --prerelease \
+            --title 'منبّه الفجر — نسخة تجريبية' \
+            --notes 'Debug-signed test build. Test alarms, permissions and barcode scanning on your device before relying on it.' \
+            'FajrAlarm/app/build/outputs/apk/debug/app-debug.apk#fajr-alarm-test.apk'
