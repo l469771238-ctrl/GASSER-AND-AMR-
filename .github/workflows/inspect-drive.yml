@@ -1,0 +1,29 @@
+name: Inspect supplied file
+on:
+  push:
+    branches: ['arena/8bed749a-gasser-and-amr']
+    paths: ['.github/workflows/inspect-drive.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download the shared file
+        run: |
+          python -m pip install --disable-pip-version-check 'gdown==5.2.0'
+          mkdir -p incoming
+          gdown 'https://drive.google.com/uc?id=1mGjvzd_CIAwLc-Z69IZi0rmWDRxoVGU_' -O incoming/supplied-file
+          test -s incoming/supplied-file
+          test "$(stat -c %s incoming/supplied-file)" -le 52428800
+          file incoming/supplied-file
+          ls -lh incoming/supplied-file
+      - name: Upload file for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: supplied-file
+          path: incoming/supplied-file
+          retention-days: 1
+          if-no-files-found: error
