@@ -76,9 +76,14 @@ class ScanActivity : AppCompatActivity() {
         preview.visibility=if(scan)View.VISIBLE else View.GONE;frame.visibility=if(scan)View.VISIBLE else View.GONE
         flashBtn.visibility=if(scan)View.VISIBLE else View.GONE;stopBtn.visibility=if(scan)View.GONE else View.VISIBLE
         msg.text=if(register)"وجّه الكاميرا على باركودك" else if(scan)"امسح أي باركود محفوظ" else "${RingService.label} · اضغط إيقاف"
-        if(!scan){camera?.cameraControl?.enableTorch(false);torchOn=false;return}
+        if(!scan){stopCamera();return}
         if(!register&&Store.keys(this).isEmpty()){stopBtn.visibility=View.VISIBLE;msg.text="لا يوجد باركود محفوظ";return}
         if(hasCam())startCamera() else ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.CAMERA),2)
+    }
+    private fun stopCamera(){
+        camera?.cameraControl?.enableTorch(false);torchOn=false;flashBtn.text="الفلاش";flashBtn.isEnabled=false
+        try { val future=ProcessCameraProvider.getInstance(this);if(future.isDone)future.get().unbindAll() } catch (_: Exception) {}
+        camera=null;started=false
     }
     private fun hasCam()=ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED
     override fun onRequestPermissionsResult(rc: Int,p: Array<out String>,r: IntArray){super.onRequestPermissionsResult(rc,p,r);if(rc==2){if(hasCam())startCamera() else if(register)finish() else {msg.text="الكاميرا غير متاحة";stopBtn.visibility=View.VISIBLE}}}
@@ -88,7 +93,7 @@ class ScanActivity : AppCompatActivity() {
         val fut=ProcessCameraProvider.getInstance(this)
         fut.addListener({
             try {
-                if(isFinishing||isDestroyed)return@addListener
+                if(isFinishing||isDestroyed||(!register&&!RingService.requiresKey)){started=false;return@addListener}
                 val provider=fut.get()
                 val prev=Preview.Builder().build().also{it.setSurfaceProvider(preview.surfaceProvider)}
                 @Suppress("DEPRECATION") val analysis=ImageAnalysis.Builder().setTargetResolution(Size(1280,720)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
@@ -113,5 +118,5 @@ class ScanActivity : AppCompatActivity() {
         else if(Store.keys(this).contains(v)){done=true;RingService.dismiss(this)}
         else msg.text="ده مش باركود محفوظ"
     }
-    override fun onDestroy(){camera?.cameraControl?.enableTorch(false);scanner.close();exec.shutdown();super.onDestroy()}
+    override fun onDestroy(){stopCamera();scanner.close();exec.shutdown();super.onDestroy()}
 }

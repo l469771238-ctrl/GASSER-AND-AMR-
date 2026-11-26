@@ -2,6 +2,8 @@ package com.gasser.fajr
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.NotificationManager
+import android.content.pm.PackageManager
 import android.app.TimePickerDialog
 import android.content.ComponentName
 import android.content.Intent
@@ -28,7 +30,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import java.time.Instant
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -86,6 +87,10 @@ class MainActivity : AppCompatActivity() {
     private fun readyFor(slot:Int):Boolean {
         if(Store.needsKey(this,slot)&&Store.keys(this).isEmpty()){toast("سجّل باركودًا أولاً");manageKeys();return false}
         if(!Scheduler.canSchedule(this)){toast("فعّل المنبّهات الدقيقة من التهيئة");if(Build.VERSION.SDK_INT>=31)launch(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName")));return false}
+        if(Build.VERSION.SDK_INT>=33 && ActivityCompat.checkSelfPermission(this,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){toast("اسمح بالإشعارات للمنبّه");ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.POST_NOTIFICATIONS),3);return false}
+        val notifications=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if(!notifications.areNotificationsEnabled()){toast("فعّل إشعارات المنبّه");launch(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName));return false}
+        if(Build.VERSION.SDK_INT>=34 && !notifications.canUseFullScreenIntent()){toast("اسمح للمنبّه بالظهور على شاشة القفل");launch(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")));return false}
         return true
     }
     private fun alarmSwitch(slot:Int):SwitchCompat=SwitchCompat(this).apply{
@@ -148,17 +153,19 @@ class MainActivity : AppCompatActivity() {
         if(!::timeTv.isInitialized)return
         val now=System.currentTimeMillis();val next=(0..4).map{it to Scheduler.nextPrayer(this,it,now)}.minByOrNull{it.second}!!
         timeTv.text=formatTime(next.second);leftTv.text=Prayer.NAMES[next.first]+" · باقي "+((next.second-now)/60000)+" دقيقة"
-        val today=LocalDate.now(Prayer.ZONE);statusTv.text=if(OfficialPrayer.cached(this,today)!=null)"مواقيت الهيئة المصرية للمساحة · كفر الشيخ" else "توقيت تقريبي · الاتصال لتحديث مواقيت الهيئة"
-        for(slot in 0..4)times[slot]?.text=formatTime(Scheduler.nextPrayer(this,slot,now))
+        fun isOfficial(instant:Long):Boolean = OfficialPrayer.cached(this,Instant.ofEpochMilli(instant).atZone(Prayer.ZONE).toLocalDate())!=null
+        statusTv.text=if(isOfficial(next.second))"الهيئة المصرية للمساحة · كفر الشيخ" else "توقيت تقريبي · الاتصال لتحديث مواقيت الهيئة"
+        for(slot in 0..4){val at=Scheduler.nextPrayer(this,slot,now);times[slot]?.text=formatTime(at)+if(isOfficial(at))" · الهيئة" else " · تقريبي"}
         if(::quickStatus.isInitialized){if(Store.on(this,6)){val remaining=((Store.quickElapsed(this)-SystemClock.elapsedRealtime()).coerceAtLeast(0)+999)/1000;quickStatus.text=String.format(Locale.US,"باقي %02d:%02d:%02d",remaining/3600,(remaining%3600)/60,remaining%60)}else quickStatus.text="$quickMinutes دقيقة"}
     }
     private fun launch(i:Intent){try{startActivity(i)}catch(_:Exception){try{startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))}catch(_:Exception){}}}
-    private fun showSetup(){val items=arrayOf("البطارية: بدون قيود","التشغيل التلقائي","النوافذ وشاشة القفل","المنبّهات الدقيقة","الإشعارات")
+    private fun showSetup(){val items=arrayOf("البطارية: بدون قيود","التشغيل التلقائي","النوافذ وشاشة القفل","المنبّهات الدقيقة","الإشعارات","العرض بملء الشاشة")
         AlertDialog.Builder(this).setItems(items){_,w->when(w){
             0->launch(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,Uri.parse("package:$packageName")))
             1->launch(Intent().setComponent(ComponentName("com.miui.securitycenter","com.miui.permcenter.autostart.AutoStartManagementActivity")))
             2->launch(Intent("miui.intent.action.APP_PERM_EDITOR").setClassName("com.miui.securitycenter","com.miui.permcenter.permissions.PermissionsEditorActivity").putExtra("extra_pkgname",packageName))
             3->if(Build.VERSION.SDK_INT>=31)launch(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName"))) else launch(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
-            else->launch(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+            4->launch(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+            else->if(Build.VERSION.SDK_INT>=34)launch(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName"))) else launch(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
         }}.show()}
 }
