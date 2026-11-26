@@ -61,7 +61,7 @@ class ScanActivity : AppCompatActivity() {
         root.addView(frame,FrameLayout.LayoutParams(side,side,Gravity.CENTER))
         msg=TextView(this).apply { setTextColor(Color.WHITE);textSize=20f;gravity=Gravity.CENTER;setBackgroundColor(Color.parseColor("#B8160A"));setPadding(16.dp(),18.dp(),16.dp(),18.dp()) }
         root.addView(msg,FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM))
-        stopBtn=Button(this).apply { text="إيقاف";setOnClickListener{RingService.dismiss(this@ScanActivity)} }
+        stopBtn=Button(this).apply { text="إيقاف";setOnClickListener{isEnabled=false;RingService.dismiss(this@ScanActivity)} }
         root.addView(stopBtn,FrameLayout.LayoutParams(-2,-2,Gravity.CENTER))
         flashBtn=Button(this).apply { text="الفلاش";isEnabled=false;setOnClickListener { val cam=camera ?: return@setOnClickListener;torchOn=!torchOn;cam.cameraControl.enableTorch(torchOn);text=if(torchOn)"إطفاء الفلاش" else "الفلاش" } }
         root.addView(flashBtn,FrameLayout.LayoutParams(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin=32.dp() })
@@ -71,7 +71,7 @@ class ScanActivity : AppCompatActivity() {
     override fun onStart(){super.onStart();ContextCompat.registerReceiver(this,changes,IntentFilter(RingService.CHANGED),ContextCompat.RECEIVER_NOT_EXPORTED)}
     override fun onStop(){unregisterReceiver(changes);super.onStop()}
     private fun setupMode() {
-        done=false
+        done=false;stopBtn.isEnabled=true
         val scan=register||RingService.requiresKey
         preview.visibility=if(scan)View.VISIBLE else View.GONE;frame.visibility=if(scan)View.VISIBLE else View.GONE
         flashBtn.visibility=if(scan)View.VISIBLE else View.GONE;stopBtn.visibility=if(scan)View.GONE else View.VISIBLE

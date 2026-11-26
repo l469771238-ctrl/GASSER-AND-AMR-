@@ -72,7 +72,8 @@ class RingService : Service() {
         val first=q.optJSONObject(0) ?: run { stopSelf();return }
         label=first.optString("label","المنبّه");requiresKey=first.optBoolean("key",true);active=true
         foreground()
-        if(wl?.isHeld!=true)wl=(getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"fajr:ring").apply { acquire(AUTO_STOP_MS+60000L) }
+        try { if(wl?.isHeld==true) wl?.release() } catch (_: Exception) {}
+        wl=(getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"fajr:ring").apply { acquire(AUTO_STOP_MS+60000L) }
         player?.stop();player=SoundPlayer(this).also { it.start(first.optInt("sound",0).coerceIn(0,Synth.NAMES.lastIndex),Store.volume(this)/100f,Store.boost(this),Store.ramp(this)) }
         vib=getSystemService(Context.VIBRATOR_SERVICE) as Vibrator;vib?.vibrate(VibrationEffect.createWaveform(longArrayOf(0,700,300),0))
         h.removeCallbacks(autoStop);h.postDelayed(autoStop,AUTO_STOP_MS)
