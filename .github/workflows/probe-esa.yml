@@ -1,0 +1,25 @@
+name: Inspect official prayer times format
+on:
+  push:
+    branches: ['arena/8bed749a-gasser-and-amr']
+    paths: ['.github/workflows/probe-esa.yml']
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch sample without executing it
+        run: |
+          mkdir -p .inspection
+          curl --fail --location --max-time 30 'https://www.esa.gov.eg/praytimes.aspx' -o .inspection/esa.html
+          test "$(stat -c %s .inspection/esa.html)" -le 2000000
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .inspection/esa.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record prayer timetable format for inspection'
+            git push origin HEAD:refs/heads/arena/8bed749a-gasser-and-amr
+          fi
