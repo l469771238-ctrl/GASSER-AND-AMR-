@@ -1,0 +1,22 @@
+name: Publish editable Android source
+on:
+  push:
+    branches: ['arena/8bed749a-gasser-and-amr']
+    paths:
+      - '.github/workflows/publish-editable-source.yml'
+      - 'deliverables/fajr-alarm-editable-source.zip'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source archive
+        run: |
+          unzip -t deliverables/fajr-alarm-editable-source.zip
+          unzip -l deliverables/fajr-alarm-editable-source.zip | grep 'FajrAlarm/gradlew'
+      - name: Attach archive to the matching APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload fajr-test-45756441220 deliverables/fajr-alarm-editable-source.zip
