@@ -22,7 +22,7 @@ jobs:
         with:
           gradle-version: '8.7'
       - name: Build debug APK
-        run: gradle -p FajrAlarm assembleDebug --no-daemon --stacktrace
+        run: gradle -p FajrAlarm testDebugUnitTest assembleDebug --no-daemon --stacktrace
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -36,6 +36,6 @@ jobs:
         run: |
           gh release create "fajr-test-${GITHUB_RUN_ID}" \
             --target "$GITHUB_SHA" --prerelease \
-            --title 'منبّه الفجر — نسخة تجريبية' \
+            --title 'منبّه الصلاة — نسخة تجريبية' \
             --notes 'Debug-signed test build. Test alarms, permissions and barcode scanning on your device before relying on it.' \
             'FajrAlarm/app/build/outputs/apk/debug/app-debug.apk#fajr-alarm-test.apk'
