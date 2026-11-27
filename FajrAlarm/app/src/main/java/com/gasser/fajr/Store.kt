@@ -41,4 +41,6 @@ object Store {
     fun removeKey(c: Context, value: String) { saveKeys(c,keys(c).filterNot { it == value }) }
     fun events(c: Context) = p(c).getString("ring_events", "[]") ?: "[]"
     fun saveEvents(c: Context, events: String) { p(c).edit().putString("ring_events",events).commit() }
+    fun ringDeadline(c: Context) = p(c).getLong("ring_deadline_elapsed", 0L)
+    fun setRingDeadline(c: Context, v: Long) { p(c).edit().putLong("ring_deadline_elapsed",v).commit() }
 }

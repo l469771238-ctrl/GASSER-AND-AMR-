@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -34,8 +33,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
-    private val NIGHT=Color.parseColor("#0F1733");private val PANEL=Color.parseColor("#18234B");private val LINE=Color.parseColor("#2A376B")
-    private val DAWN=Color.parseColor("#F2B45C");private val TEXT=Color.parseColor("#EAEDFB");private val MUTED=Color.parseColor("#9099C4")
+    private val NIGHT=Color.parseColor("#091326")
+    private val DAWN=GlassStyle.GOLD;private val TEXT=GlassStyle.TEXT;private val MUTED=GlassStyle.MUTED
     private lateinit var scroll: ScrollView;private lateinit var root: LinearLayout;private lateinit var timeTv: TextView;private lateinit var leftTv: TextView;private lateinit var statusTv: TextView
     private val times=mutableMapOf<Int,TextView>();private lateinit var quickStatus: TextView
     private lateinit var player: SoundPlayer
@@ -52,31 +51,45 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onResume(){super.onResume();if(RingService.active)startActivity(Intent(this,ScanActivity::class.java));Scheduler.scheduleAll(this,true);OfficialPrayer.refresh(this);render();h.post(ticker)}
     override fun onPause(){h.removeCallbacks(ticker);h.removeCallbacks(stopTest);player.stop();super.onPause()}
-    private fun rounded(c:Int,r:Int=14)=GradientDrawable().apply{setColor(c);cornerRadius=r.dp().toFloat()}
     private fun text(t:String,size:Float=16f,color:Int=TEXT)=TextView(this).apply{text=t;textSize=size;setTextColor(color);gravity=Gravity.CENTER_VERTICAL}
-    private fun btn(t:String,action:()->Unit)=Button(this).apply{text=t;isAllCaps=false;setTextColor(TEXT);background=rounded(LINE,10);minWidth=0;minimumWidth=0;setOnClickListener{action()}}
-    private fun heading(t:String){root.addView(text(t,17f,DAWN).apply{typeface=Typeface.DEFAULT_BOLD;setPadding(0,20.dp(),0,8.dp())})}
-    private fun card():LinearLayout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=rounded(PANEL);setPadding(14.dp(),10.dp(),14.dp(),10.dp());root.addView(this,LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=8.dp()})}
+    private fun btn(t:String,action:()->Unit)=Button(this).apply {
+        text=t;isAllCaps=false;setTextColor(TEXT);textSize=13f;typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL)
+        background=GlassStyle.button(this@MainActivity);minWidth=0;minimumWidth=0;minimumHeight=0;setPadding(8.dp(),0,8.dp(),0);setOnClickListener{action()}
+    }
+    private fun heading(t:String){root.addView(text(t,17f,TEXT).apply{typeface=Typeface.create("sans-serif-medium",Typeface.BOLD);setPadding(2.dp(),22.dp(),0,10.dp())})}
+    private fun card():LinearLayout=LinearLayout(this).apply {
+        orientation=LinearLayout.VERTICAL;background=GlassStyle.panel(this@MainActivity);setPadding(16.dp(),14.dp(),16.dp(),14.dp());elevation=2.dp().toFloat()
+        root.addView(this,LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=10.dp()})
+    }
+    private fun styleSwitch(sw:SwitchCompat){
+        val states=arrayOf(intArrayOf(android.R.attr.state_checked),intArrayOf())
+        sw.thumbTintList=ColorStateList(states,intArrayOf(DAWN,Color.parseColor("#E6EDF7")))
+        sw.trackTintList=ColorStateList(states,intArrayOf(Color.parseColor("#B77C49"),Color.parseColor("#5D7088")))
+    }
     private fun row()=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
     private fun addWeighted(parent:LinearLayout,v:View){parent.addView(v,LinearLayout.LayoutParams(0,-2,1f))}
-    private fun rowButton(parent:LinearLayout,label:String,action:()->Unit){val b=btn(label,action);parent.addView(b,LinearLayout.LayoutParams(0,46.dp(),1f).apply{marginStart=4.dp();marginEnd=4.dp()})}
+    private fun rowButton(parent:LinearLayout,label:String,accent:Boolean=false,action:()->Unit){val b=btn(label,action);if(accent){b.background=GlassStyle.button(this,true);b.setTextColor(Color.parseColor("#261A0E"))};parent.addView(b,LinearLayout.LayoutParams(0,48.dp(),1f).apply{marginStart=4.dp();marginEnd=4.dp()})}
     private fun render(){
         val old=if(::scroll.isInitialized)scroll.scrollY else 0
-        times.clear();root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(20.dp(),28.dp(),20.dp(),32.dp())}
-        scroll=ScrollView(this).apply{setBackgroundColor(NIGHT);isFillViewport=true;addView(root)}
-        timeTv=text("--:--",52f,DAWN).apply{typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;textDirection=View.TEXT_DIRECTION_LTR}
-        leftTv=text("",14f,MUTED).apply{gravity=Gravity.CENTER};statusTv=text("",12f,MUTED).apply{gravity=Gravity.CENTER}
-        root.addView(text("الصلاة القادمة · كفر الشيخ",14f,MUTED).apply{gravity=Gravity.CENTER});root.addView(timeTv);root.addView(leftTv);root.addView(statusTv)
+        times.clear();root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(18.dp(),24.dp(),18.dp(),36.dp())}
+        scroll=ScrollView(this).apply{background=GlassStyle.backdrop();isFillViewport=true;isVerticalScrollBarEnabled=false;addView(root)}
+        val top=row();addWeighted(top,text("صَحّي  ☾",22f,TEXT).apply{typeface=Typeface.DEFAULT_BOLD});top.addView(text("كفر الشيخ",12f,DAWN));root.addView(top)
+        val hero=card();(hero.layoutParams as LinearLayout.LayoutParams).topMargin=24.dp();hero.setPadding(16.dp(),22.dp(),16.dp(),22.dp())
+        timeTv=text("--:--",52f,DAWN).apply{typeface=Typeface.create("sans-serif",Typeface.BOLD);gravity=Gravity.CENTER;textDirection=View.TEXT_DIRECTION_LTR}
+        leftTv=text("",14f,TEXT).apply{gravity=Gravity.CENTER};statusTv=text("",12f,MUTED).apply{gravity=Gravity.CENTER;setPadding(0,6.dp(),0,0)}
+        hero.addView(text("الصلاة القادمة",13f,MUTED).apply{gravity=Gravity.CENTER});hero.addView(timeTv);hero.addView(leftTv);hero.addView(statusTv)
         heading("الصلوات الخمس")
         for(slot in 0..4)prayerCard(slot)
         heading("منبّه خاص");customCard()
         heading("منبّه سريع · مرة واحدة");quickCard()
         heading("إعدادات الصوت")
-        root.addView(slider({"الصوت $it%"},30,100,Store.volume(this)){Store.setVolume(this,it)})
-        root.addView(slider({"تضخيم +$it dB"},0,18,Store.boost(this)){Store.setBoost(this,it)})
-        root.addView(slider({if(it==0)"أقصى صوت فوراً" else "أقصى صوت بعد $it ث"},0,60,Store.ramp(this)){Store.setRamp(this,it)})
-        root.addView(text("التضخيم العالي قد يضر السمع والسماعة. ارفع صوت المنبّه من إعدادات الجهاز.",12f,MUTED).apply{setPadding(0,8.dp(),0,6.dp())})
-        val actions=row();rowButton(actions,"الباركودات (${Store.keys(this).size})"){manageKeys()};rowButton(actions,"تجربة الصوت"){previewSound(0)};rowButton(actions,"تهيئة"){showSetup()};root.addView(actions)
+        val soundPanel=card()
+        soundPanel.addView(slider({"الصوت $it%"},30,100,Store.volume(this)){Store.setVolume(this,it)})
+        soundPanel.addView(slider({"تضخيم +$it dB"},0,18,Store.boost(this)){Store.setBoost(this,it)})
+        soundPanel.addView(slider({if(it==0)"أقصى صوت فوراً" else "أقصى صوت بعد $it ث"},0,60,Store.ramp(this)){Store.setRamp(this,it)})
+        soundPanel.addView(text("أثناء الرنين يحاول المنبّه رفع صوت الجهاز؛ جرّبه بعيدًا عن أذنك.",12f,MUTED).apply{setPadding(0,8.dp(),0,6.dp())})
+        val actions=row();rowButton(actions,"الباركودات (${Store.keys(this).size})"){manageKeys()};rowButton(actions,"تجربة الصوت"){previewSound(0)};root.addView(actions)
+        val settings=row();rowButton(settings,"التهيئة والصلاحيات"){showSetup()};root.addView(settings,LinearLayout.LayoutParams(-1,-2).apply{topMargin=8.dp()})
         setContentView(scroll);scroll.post{scroll.scrollTo(0,old)};refresh()
     }
     private fun soundButton(slot:Int):Button=btn(Synth.NAMES[Store.sound(this,slot)]) {
@@ -94,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         return true
     }
     private fun alarmSwitch(slot:Int):SwitchCompat=SwitchCompat(this).apply{
-        isChecked=Store.on(this@MainActivity,slot);contentDescription="تشغيل المنبّه"
+        styleSwitch(this);isChecked=Store.on(this@MainActivity,slot);contentDescription=if(slot<5)"تشغيل منبّه ${Prayer.NAMES[slot]}" else "تشغيل المنبّه الخاص"
         setOnCheckedChangeListener{_,checked->
             if(checked && !readyFor(slot)){isChecked=false;return@setOnCheckedChangeListener}
             if(checked && slot==5 && Store.customAt(this@MainActivity)==0L){isChecked=false;chooseCustom();return@setOnCheckedChangeListener}
@@ -106,7 +119,7 @@ class MainActivity : AppCompatActivity() {
         val card=card();val header=row();addWeighted(header,text(Prayer.NAMES[slot],17f,TEXT).apply{typeface=Typeface.DEFAULT_BOLD});header.addView(alarmSwitch(slot));card.addView(header)
         val second=row();val t=text("--:--",16f,MUTED);times[slot]=t;addWeighted(second,t);second.addView(soundButton(slot),LinearLayout.LayoutParams(125.dp(),46.dp()));card.addView(second)
     }
-    private fun keyChoice(card:LinearLayout,slot:Int){val r=row();addWeighted(r,text("الإيقاف بالباركود",14f,MUTED));val sw=SwitchCompat(this);sw.isChecked=Store.needsKey(this,slot);sw.setOnCheckedChangeListener{_,v->
+    private fun keyChoice(card:LinearLayout,slot:Int){val r=row();addWeighted(r,text("الإيقاف بالباركود",14f,MUTED));val sw=SwitchCompat(this);styleSwitch(sw);sw.contentDescription="الإيقاف بالباركود";sw.isChecked=Store.needsKey(this,slot);sw.setOnCheckedChangeListener{_,v->
         if(v&&Store.keys(this).isEmpty()){sw.isChecked=false;toast("سجّل باركودًا أولاً");return@setOnCheckedChangeListener}
         Store.setNeedsKey(this,slot,v);if(Store.on(this,slot))Scheduler.schedule(this,slot)
     };r.addView(sw);card.addView(r)}
@@ -128,7 +141,7 @@ class MainActivity : AppCompatActivity() {
         val card=card();quickStatus=text("",18f,TEXT).apply{gravity=Gravity.CENTER};card.addView(quickStatus)
         val controls=row();rowButton(controls,"−٥"){quickMinutes=(quickMinutes-5).coerceAtLeast(5);refresh()};rowButton(controls,"+٥"){quickMinutes=(quickMinutes+5).coerceAtMost(1440);refresh()};rowButton(controls,"+١٠"){quickMinutes=(quickMinutes+10).coerceAtMost(1440);refresh()};card.addView(controls)
         keyChoice(card,6);val sound=row();addWeighted(sound,text("النغمة",14f,MUTED));sound.addView(soundButton(6),LinearLayout.LayoutParams(125.dp(),46.dp()));card.addView(sound)
-        val actions=row();rowButton(actions,if(Store.on(this,6))"إعادة التشغيل" else "ابدأ"){if(readyFor(6)){val duration=quickMinutes*60000L;Store.setQuick(this,System.currentTimeMillis()+duration,SystemClock.elapsedRealtime()+duration);Store.setOn(this,6,true);Scheduler.schedule(this,6);render()}}
+        val actions=row();rowButton(actions,if(Store.on(this,6))"إعادة التشغيل" else "ابدأ",true){if(readyFor(6)){val duration=quickMinutes*60000L;Store.setQuick(this,System.currentTimeMillis()+duration,SystemClock.elapsedRealtime()+duration);Store.setOn(this,6,true);Scheduler.schedule(this,6);render()}}
         if(Store.on(this,6))rowButton(actions,"إلغاء"){Store.setOn(this,6,false);Scheduler.schedule(this,6);render()};card.addView(actions)
     }
     private fun manageKeys(){

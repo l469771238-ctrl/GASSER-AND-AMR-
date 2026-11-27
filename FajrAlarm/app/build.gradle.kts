@@ -9,8 +9,8 @@ android {
         applicationId = "com.gasser.fajr"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0-test"
+        versionCode = 3
+        versionName = "3.0-test"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

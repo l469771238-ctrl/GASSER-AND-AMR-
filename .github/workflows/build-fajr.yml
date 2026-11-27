@@ -23,11 +23,30 @@ jobs:
           gradle-version: '8.7'
       - name: Build debug APK
         run: gradle -p FajrAlarm testDebugUnitTest assembleDebug --no-daemon --stacktrace
+      - name: Package editable Android source
+        run: |
+          unzip -oq deliverables/fajr-alarm-editable-source.zip \
+            'FajrAlarm/gradlew' 'FajrAlarm/gradlew.bat' \
+            'FajrAlarm/gradle/wrapper/*' 'FajrAlarm/.github/workflows/build.yml'
+          chmod +x FajrAlarm/gradlew
+          cat >> FajrAlarm/README.md <<'INSTRUCTIONS'
+
+          ## التعديل والبناء
+          افتح مجلد FajrAlarm في Android Studio مع JDK 17 وAndroid SDK 34، ثم عدّل ملفات Kotlin في app/src/main/java/com/gasser/fajr. شغّل ./gradlew testDebugUnitTest assembleDebug، أو gradlew.bat على Windows. الناتج: app/build/outputs/apk/debug/app-debug.apk. يمكن رفع محتويات المشروع إلى GitHub وبناؤه عبر سير العمل المرفق.
+
+          نسخة debug للتجربة. لتحديث نسخة مثبتة دون حذفها تحتاج نفس مفتاح توقيعها، ومفتاح debug المؤقت للنسخة السابقة غير مرفق. لا ترفع مفاتيح التوقيع الخاصة للمستودع.
+          INSTRUCTIONS
+          mkdir -p artifacts
+          zip -qr artifacts/fajr-alarm-editable-source.zip FajrAlarm \
+            -x 'FajrAlarm/app/build/*' 'FajrAlarm/.gradle/*' 'FajrAlarm/build/*' 'FajrAlarm/local.properties'
+          unzip -t artifacts/fajr-alarm-editable-source.zip
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fajr-alarm-debug-apk
-          path: FajrAlarm/app/build/outputs/apk/debug/app-debug.apk
+          name: fajr-alarm-test-build
+          path: |
+            FajrAlarm/app/build/outputs/apk/debug/app-debug.apk
+            artifacts/fajr-alarm-editable-source.zip
           if-no-files-found: error
           retention-days: 30
       - name: Publish test APK
@@ -38,4 +57,5 @@ jobs:
             --target "$GITHUB_SHA" --prerelease \
             --title 'منبّه الصلاة — نسخة تجريبية' \
             --notes 'Debug-signed test build. Test alarms, permissions and barcode scanning on your device before relying on it.' \
-            'FajrAlarm/app/build/outputs/apk/debug/app-debug.apk#fajr-alarm-test.apk'
+            'FajrAlarm/app/build/outputs/apk/debug/app-debug.apk#fajr-alarm-test.apk' \
+            'artifacts/fajr-alarm-editable-source.zip'
